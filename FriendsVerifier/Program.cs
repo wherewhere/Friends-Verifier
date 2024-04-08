@@ -95,7 +95,7 @@ namespace FriendsVerifier
             };
             verifyCommand.SetAction(x => VerifyCommandHandler(x.GetValue(nameArgument), x.GetValue(codeOption), x.GetValue(timeOption)));
 
-            CliCommand removeCommand = new("remove", Resource.AddCommandDescription)
+            CliCommand removeCommand = new("remove", Resource.RemoveCommandDescription)
             {
                 nameArgument
             };
@@ -177,7 +177,7 @@ namespace FriendsVerifier
                 Configuration["Users"] = JsonSerializer.Serialize(new() { { name, passkey } }, SourceGenerationContext.Default.DictionaryStringString);
                 format = Resource.AddSucceedFormat;
             }
-            Console.WriteLine(format, name, new OtpUri(OtpType.Totp, Encoding.Unicode.GetBytes(passkey), name, "Friends Verifier"));
+            Console.WriteLine(format, name, new OtpUri(OtpType.Totp, $"{name}{passkey}".GetBase64(), name, "Friends Verifier"));
         }
 
         private static void OutputCommandHandler(string name, OutputType outputType)
@@ -189,11 +189,11 @@ namespace FriendsVerifier
                 {
                     if (outputType == OutputType.Code)
                     {
-                        Console.WriteLine(new Totp(Encoding.Unicode.GetBytes(passkey)).ComputeTotp());
+                        Console.WriteLine(new Totp(JsonSerializer.Serialize($"{name}{passkey}").GetBase64()).ComputeTotp());
                     }
                     else
                     {
-                        OtpUri otp = new(OtpType.Totp, Encoding.Unicode.GetBytes(passkey), name, "Friends Verifier");
+                        OtpUri otp = new(OtpType.Totp, $"{name}{passkey}".GetBase64(), name, "Friends Verifier");
                         switch (outputType)
                         {
                             case OutputType.Url:
@@ -223,7 +223,7 @@ namespace FriendsVerifier
                 Dictionary<string, string> list = JsonSerializer.Deserialize(users, SourceGenerationContext.Default.DictionaryStringString);
                 if (list.TryGetValue(name, out string passkey))
                 {
-                    if (new Totp(Encoding.Unicode.GetBytes(passkey)).VerifyTotp(dateTimeOffset.UtcDateTime, code.ToString(), out _))
+                    if (new Totp($"{name}{passkey}".GetBase64()).VerifyTotp(dateTimeOffset.UtcDateTime, code.ToString(), out _))
                     {
                         Console.WriteLine(Resource.VerifySucceedFormat, name);
                     }
@@ -270,9 +270,10 @@ namespace FriendsVerifier
             }
             Console.WriteLine(string.Format(Resource.CurrentLanguageChangedFormat, CultureInfo.CurrentCulture.DisplayName));
         }
+
+        private static byte[] GetBase64(this string input) => Encoding.UTF8.GetBytes(Convert.ToBase64String(Encoding.UTF8.GetBytes(input)));
     }
 
-    [JsonSerializable(typeof(string))]
     [JsonSerializable(typeof(Dictionary<string, string>))]
     public partial class SourceGenerationContext : JsonSerializerContext;
 }
