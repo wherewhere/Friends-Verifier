@@ -7,7 +7,8 @@
     <LangVersion>preview</LangVersion>
     <PackageProjectUrl>https://github.com/wherewhere/Friends-Verifier</PackageProjectUrl>
     <RepositoryUrl>https://github.com/wherewhere/Friends-Verifier</RepositoryUrl>
-    <TargetFramework>net4.8</TargetFramework>
+    <TargetFrameworks>net4.8;net8.0</TargetFrameworks>
+    <PublishAot Condition="'$(TargetFramework)' == 'net8.0'">True</PublishAot>
     <VersionPrefix>0.0.1</VersionPrefix>
   </PropertyGroup>
 

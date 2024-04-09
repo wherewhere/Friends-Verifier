@@ -7,6 +7,7 @@ using QRCoder;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.CommandLine.Parsing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -34,7 +35,7 @@ namespace FriendsVerifier
                 HelpName = Resource.NameArgument
             };
             nameArgument.CompletionSources.Add(
-                x => Configuration.GetValue<string>("Users") is string users
+                x => Configuration["Users"] is string users
                      && JsonSerializer.Deserialize(users, SourceGenerationContext.Default.DictionaryStringString) is Dictionary<string, string> list ?
                      from name in list.Keys
                      where string.IsNullOrWhiteSpace(x.WordToComplete) || name.StartsWith(x.WordToComplete.Trim('\'', '\"', ' '), StringComparison.OrdinalIgnoreCase)
@@ -81,7 +82,29 @@ namespace FriendsVerifier
             CliOption<DateTimeOffset> timeOption = new("--time", "-t")
             {
                 Arity = ArgumentArity.ZeroOrOne,
-                DefaultValueFactory = _ => DateTimeOffset.UtcNow,
+                CustomParser = x =>
+                {
+                    if (x.Tokens[0] is CliToken token)
+                    {
+                        if (long.TryParse(token.Value, out long number))
+                        {
+                            return DateTimeOffset.FromUnixTimeSeconds(number);
+                        }
+                        else
+                        {
+                            try
+                            {
+                                return DateTimeOffset.Parse(token.Value, CultureInfo.CurrentCulture);
+                            }
+                            catch (Exception ex)
+                            {
+                                x.AddError(ex.ToString());
+                            }
+                        }
+                    }
+                    return DateTimeOffset.UtcNow;
+                },
+                DefaultValueFactory = _ => DateTimeOffset.Now,
                 Description = Resource.TimeOptionDescription,
                 HelpName = Resource.TimeOption
             };
@@ -164,7 +187,7 @@ namespace FriendsVerifier
         private static void AddCommandHandler(string name, string passkey)
         {
             string format;
-            if (Configuration.GetValue<string>("Users") is string users)
+            if (Configuration["Users"] is string users)
             {
                 Dictionary<string, string> list = JsonSerializer.Deserialize(users, SourceGenerationContext.Default.DictionaryStringString);
                 bool exist = list.ContainsKey(name);
@@ -182,14 +205,14 @@ namespace FriendsVerifier
 
         private static void OutputCommandHandler(string name, OutputType outputType)
         {
-            if (Configuration.GetValue<string>("Users") is string users)
+            if (Configuration["Users"] is string users)
             {
                 Dictionary<string, string> list = JsonSerializer.Deserialize(users, SourceGenerationContext.Default.DictionaryStringString);
                 if (list.TryGetValue(name, out string passkey))
                 {
                     if (outputType == OutputType.Code)
                     {
-                        Console.WriteLine(new Totp(JsonSerializer.Serialize($"{name}{passkey}").GetBase64()).ComputeTotp());
+                        Console.WriteLine(new Totp($"{name}{passkey}".GetBase64()).ComputeTotp());
                     }
                     else
                     {
@@ -218,7 +241,7 @@ namespace FriendsVerifier
 
         private static void VerifyCommandHandler(string name, int code, DateTimeOffset dateTimeOffset)
         {
-            if (Configuration.GetValue<string>("Users") is string users)
+            if (Configuration["Users"] is string users)
             {
                 Dictionary<string, string> list = JsonSerializer.Deserialize(users, SourceGenerationContext.Default.DictionaryStringString);
                 if (list.TryGetValue(name, out string passkey))
@@ -239,7 +262,7 @@ namespace FriendsVerifier
 
         private static void RemoveCommandHandler(string name)
         {
-            if (Configuration.GetValue<string>("Users") is string users)
+            if (Configuration["Users"] is string users)
             {
                 Dictionary<string, string> list = JsonSerializer.Deserialize(users, SourceGenerationContext.Default.DictionaryStringString);
                 if (list.ContainsKey(name))
