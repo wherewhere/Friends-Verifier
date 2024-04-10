@@ -21,7 +21,7 @@ namespace FriendsVerifier
 {
     public static class Program
     {
-        private static readonly IConfigurationRoot Configuration = new ConfigurationBuilder().AddWritableJsonFile(Path.Combine("Assets", "AppSettings.json"), true, true).Build();
+        private static readonly IConfigurationRoot Configuration = new ConfigurationBuilder().AddWritableJsonFile(Path.ChangeExtension(nameof(FriendsVerifier), "json"), true, true).Build();
 
         public static Task<int> Main(string[] args)
         {

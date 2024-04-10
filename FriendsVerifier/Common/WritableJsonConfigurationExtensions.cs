@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.FileProviders;
 using System;
+using System.IO;
 
 namespace FriendsVerifier.Common
 {
@@ -56,6 +57,15 @@ namespace FriendsVerifier.Common
         public static IConfigurationBuilder AddWritableJsonFile(this IConfigurationBuilder builder, IFileProvider provider, string path, bool optional, bool reloadOnChange) =>
             builder.AddWritableJsonFile(s =>
             {
+                if (!File.Exists(path))
+                {
+                    string dir = Path.GetDirectoryName(path);
+                    if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                    {
+                        Directory.CreateDirectory(dir);
+                    }
+                    File.WriteAllText(path, "{}");
+                }
                 s.FileProvider = provider;
                 s.Path = path;
                 s.Optional = optional;
